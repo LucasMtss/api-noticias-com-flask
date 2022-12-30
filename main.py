@@ -1,63 +1,33 @@
-from flask import Flask, request
+from flask import Flask
 import requests
-import json
-from bs4 import BeautifulSoup
-import sys
-import io
+from flask_cors import CORS
+from tweets import getTwetsOffAllNotices
 
-app = Flask(__name__)
+app = Flask('__name__')
+app.config['JSON_AS_ASCII'] = False
 
-def getNews(page):
-    try:
-        res = requests.get(f'https://www.ifsudestemg.edu.br/noticias/barbacena/?b_start:int={int(page)*20}')
-        soup = BeautifulSoup(res.text, 'html.parser')
-        # print(soup.prettify())
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-        titles = soup.find_all("a", {"class": "summary url"})
-        descriptions = soup.find_all("span", {"class": "description"})
+cache = {}
+
+def getTweetsOfNews(news):
+  return getTwetsOffAllNotices(news)
 
 
+@app.route('/api/noticias/<categoria>')
+def noticias(categoria):
+  try:
+    if categoria in cache:
+      return cache[categoria]
+    else:
+      response = requests.get(f'http://api.mediastack.com/v1/news?access_key=5b420db782079931d5d5f1c69c24d24a&categories={categoria}&languages=pt')
+      data = response.json()
+      news = getTweetsOfNews(data['data'])
+      cache[categoria] = news
+      return news
+  except requests.exceptions.RequestException as e: 
+    return e
 
-        json = {
-            "noticias": []
-        }
 
-        for noticia in range(len(titles)):
-            json["noticias"].append({
-                "titulo": titles[noticia].contents[0],
-                "descricao" : descriptions[noticia].contents[0]
-            })
-        
-        return json
-    except:
-        return False
-
-@app.route('/', methods=['GET', 'POST', 'PUT', 'DELETE'])
-def api():
-    if request.method == 'GET':
-        return json.dumps(
-            {
-                "payload": "API rodando com sucesso!",
-                "status": 200
-            }
-        )
-
-@app.route('/noticias/<pagina>', methods=['GET'])
-def noticias(pagina):
-    if request.method == 'GET':
-        response = getNews(pagina)
-        if response == False:
-            return json.dumps({
-                "status": 400,
-                "mensagem": "Página inválida"
-            })
-        else:
-            return json.dumps(
-                {
-                    "payload": getNews(pagina),
-                    "status": 200
-                }
-            )
-
-if __name__ == '__main__':
-    app.run(debug=True)
+app.config['DEBUG'] = True
+app.run()
