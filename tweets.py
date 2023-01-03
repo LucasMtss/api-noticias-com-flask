@@ -4,7 +4,6 @@ import nltk
 from nltk.corpus import stopwords
 from summa import keywords
 from yake import yake
-import requests
 
 
 api_key = 'Z4M4N7zL0ubaam2opHmV9eFKf'
@@ -14,6 +13,7 @@ access_token = "1595482520291885074-iN9vBxgoqFotubkiPzEQaRlEFE0kLo"
 access_token_secret = "9rn0KEngcZIkLJZKvshuDgDeXBDdJB093P3mfRvZPOzWz"
 
 client = tweepy.Client(bearer_token)
+
 
 
 def removeStopWords(sentence):
@@ -46,8 +46,8 @@ def getTwetsOffAllNotices(notices):
         tweets = getTweets(removeStopWords(notice['title']))
         newsWithTweets.append({
             "news": notice,
-             "tweets": tweets,
-             "generalSentmentAnalisys": getGeneralSentmentAnalisys(tweets),
+            "tweets": tweets,
+            "generalSentmentAnalisys": getGeneralSentmentAnalisys(tweets),
         })
     return newsWithTweets
 
@@ -81,14 +81,16 @@ def getTweets(filter):
             expansions = ['geo.place_id', 'author_id'],
             place_fields = ['country','country_code']
         )
-        if response.data != None:
-            for tweet in response.data:
-                tweets.append({
-                    "postedAt": tweet.created_at,
-                    "author": tweet.author_id,
-                    "text": tweet.text,
-                    "sentimentAnalisys": sentiment_scores(tweet.text)
+        if response.data == None:
+            return tweets
+        for index, tweet in enumerate(response.data):
+            tweets.append({
+                    "author": response[1]['users'][index].name,
+                    "text": str(tweet),
+                    "sentimentAnalisys": sentiment_scores(str(tweet))
                     })
+       
         return tweets   
-    except:
+    except Exception as e:
+        print(e)
         return tweets
